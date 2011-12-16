@@ -37,36 +37,28 @@ public class MarkovChain
     learn(tokenize(string));
   }
 
-  private void learn(Iterable<String> tokenStream)
+  protected void learn(Iterable<String> tokenStream)
   {
     // TODO: Process this with a limited-length list
     LinkedList<String> tokens = new LinkedList<String>();
-    for (String token : tokenStream)
-    {
-      tokens.add(token);
-    }
     for (int i = 0; i < depth; i++)
     {
       tokens.add("");
     }
-    for (int i = 1; i <= tokens.size(); i++)
+    for (String token : tokenStream)
     {
-      int fromIndex = (i > depth) ? i - depth : 0;
-      int toIndex = i;
-      learn(fixSize(tokens.subList(fromIndex, toIndex), depth));
+      tokens.remove();
+      tokens.add(token);
+      learnSegment(tokens);
     }
-    {
-      int i = tokens.size() + 1;
-      int fromIndex = (i > depth) ? i - depth : 0;
-      int toIndex = tokens.size();
-      List<String> termList = new ArrayList<String>(tokens.subList(fromIndex, toIndex));
-      termList.add("");
-      learn(fixSize(termList, depth));
-    }
+    tokens.remove();
+    tokens.add("");
+    learnSegment(tokens);
   }
 
-  private void learn(List<String> tokens)
+  protected void learnSegment(List<String> tokens)
   {
+    assert(tokens.size() == depth);
     weight += 1;
     if (0 < tokens.size())
     {
@@ -78,11 +70,11 @@ public class MarkovChain
         data.put(firstToken, subChain);
       }
       List<String> subList = tail(tokens);
-      subChain.learn(subList);
+      subChain.learnSegment(subList);
     }
   }
 
-  private Iterable<String> tokenize(final InputStream stream)
+  protected Iterable<String> tokenize(final InputStream stream)
   {
     final Iterator<String> iterator = new Iterator<String>()
     {
@@ -143,7 +135,7 @@ public class MarkovChain
     return weight(list);
   }
 
-  private int weight(List<String> tokens)
+  protected int weight(List<String> tokens)
   {
     if (0 == tokens.size())
       return weight;
@@ -175,7 +167,7 @@ public class MarkovChain
         return new Iterator<String>()
         {
           String nextToken = null;
-          ArrayList<String> list = new ArrayList<String>();
+          LinkedList<String> list = new LinkedList<String>();
           
           public void remove()
           {
@@ -186,6 +178,7 @@ public class MarkovChain
           {
             nextToken = generateNext(list);
             list.add(nextToken);
+            if(list.size() > depth) list.remove();
             return nextToken;
           }
           
@@ -198,18 +191,23 @@ public class MarkovChain
     };
   }
 
-  private String generateNext(ArrayList<String> list)
+  public String generateNext(List<String> list)
   {
     for (int d = depth; d > 0; d--)
     {
       List<String> subList = fixSize(list, d);
-      String generateNext = generateNext(subList);
+      String generateNext = tryGenerateNext(subList);
       if (null != generateNext)
       {
         return generateNext;
       }
     }
-    return randomNext();
+    String randomNext = randomNext();
+    if(null == randomNext) 
+    {
+      throw new RuntimeException();
+    }
+    return randomNext;
   }
 
   public static List<String> fixSize(List<String> list, int listSize)
@@ -234,7 +232,7 @@ public class MarkovChain
     return newList;
   }
 
-  private String generateNext(List<String> tokens)
+  protected String tryGenerateNext(List<String> tokens)
   {
     if (0 == tokens.size())
     {
@@ -251,12 +249,12 @@ public class MarkovChain
       else
       {
         List<String> subList = tail(tokens);
-        return subChain.generateNext(subList);
+        return subChain.tryGenerateNext(subList);
       }
     }
   }
 
-  private String randomNext()
+  protected String randomNext()
   {
     double fate = new Random().nextDouble() * ((double) weight);
     for (Entry<String, MarkovChain> e : data.entrySet())

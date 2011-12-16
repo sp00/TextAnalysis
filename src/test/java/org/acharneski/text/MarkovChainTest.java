@@ -22,11 +22,13 @@ public class MarkovChainTest
   @Test
   public void testBook()
   {
-    MarkovChain chain = new MarkovChain(2);
+    MarkovChain chain = new MarkovChain(6);
     InputStream stream = this.getClass().getClassLoader().getResourceAsStream("crime_and_punishment.txt");
     chain.learn(stream);
+    int maxTokens = 10000;
     for (String t : chain.generateStream())
     {
+      if(0 > maxTokens--) break;
       System.out.print(t);
     }
   }
