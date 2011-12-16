@@ -177,6 +177,7 @@ public class MarkovChain
           public String next()
           {
             nextToken = generateNext(list);
+            while(list.size() < depth) list.add("");
             list.add(nextToken);
             if(list.size() > depth) list.remove();
             return nextToken;
@@ -193,13 +194,17 @@ public class MarkovChain
 
   public String generateNext(List<String> list)
   {
-    for (int d = depth; d > 0; d--)
+    LinkedList<String> subList = new LinkedList<String>(list);
+    while(0 < subList.size())
     {
-      List<String> subList = fixSize(list, d);
       String generateNext = tryGenerateNext(subList);
       if (null != generateNext)
       {
         return generateNext;
+      }
+      else
+      {
+        subList.remove();
       }
     }
     String randomNext = randomNext();
@@ -208,28 +213,6 @@ public class MarkovChain
       throw new RuntimeException();
     }
     return randomNext;
-  }
-
-  public static List<String> fixSize(List<String> list, int listSize)
-  {
-    ArrayList<String> newList = new ArrayList<String>();
-    int nullElements = listSize - list.size();
-    if (0 > nullElements)
-      nullElements = 0;
-    for (int i = 0; i < nullElements; i++)
-    {
-      newList.add("");
-    }
-    if (0 == nullElements)
-    {
-      newList.addAll(list.subList(list.size() - listSize, list.size()));
-    }
-    else
-    {
-      newList.addAll(list);
-    }
-    assert (listSize == newList.size());
-    return newList;
   }
 
   protected String tryGenerateNext(List<String> tokens)
